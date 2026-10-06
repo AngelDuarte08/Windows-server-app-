@@ -1,0 +1,33 @@
+{
+  "name": "logitrans-api",
+  "version": "1.0.0",
+  "description": "Servidor.js — Sistema de Gestión de Envíos · LogiTrans del Centro",
+  "main": "Servidor.js",
+  "private": true,
+  "scripts": {
+    "start": "node Servidor.js",
+    "dev": "node --watch Servidor.js",
+    "prisma:generate": "prisma generate",
+    "permisos": "node -e \"require('./src/seguridad/permisos').imprimirMatriz(require('./src/rutas'))\"",
+    "prueba:permisos": "node pruebas/matriz-permisos.js",
+    "generar-clave": "node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+  },
+  "dependencies": {
+    "@prisma/client": "^6.16.0",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "ldapts": "^8.0.0",
+    "otplib": "^12.0.1",
+    "qrcode": "^1.5.4",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.16.0"
+  }
+}

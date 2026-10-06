@@ -1,0 +1,36 @@
+# --- Dependencias y compilados ---
+node_modules/
+dist/
+*.tsbuildinfo
+logitrans-offline.zip
+logitrans.zip
+
+# --- Secretos: NUNCA se suben ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+*.der
+*.cer
+*.crt
+pgpass.conf
+
+# --- Logs y respaldos de la base ---
+*.log
+logs/
+*.dump
+*.backup
+
+# --- Sistema operativo y editores ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+
+# --- Configuración local de herramientas ---
+.claude/

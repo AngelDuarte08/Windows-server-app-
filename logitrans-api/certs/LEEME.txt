@@ -1,0 +1,8 @@
+Coloca aquí el certificado raíz de AD CS en formato PEM (Base64), exportado en SRV-LOGI01:
+
+  certutil -ca.cert ca.der
+  certutil -encode ca.der logitrans-ca.cer
+
+Node no acepta el formato DER binario que genera "certutil -ca.cert" por sí solo.
+Servidor.js lo usa para validar el certificado de LDAPS (puerto 636).
+No es necesario en laboratorio si AD_SIMULADO=true.
