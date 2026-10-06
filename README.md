@@ -1,63 +1,65 @@
-# LogiTrans del Centro · Sistema de Gestión de Envíos
+# LogiTrans del Centro · Shipment Management System
 
-Aplicación web segura para una empresa de transporte (ficticia), desarrollada como práctica de la materia de
-**Ciberseguridad** (Ingeniería en Software, Universidad Politécnica de Pénjamo).
+A secure web application for a (fictional) transport company, built as a project for the **Cybersecurity**
+course (Software Engineering, Universidad Politécnica de Pénjamo).
 
-Los empleados gestionan rutas y envíos con su cuenta de **Active Directory**, y los clientes externos
-solicitan y rastrean sus envíos con **correo, contraseña y 2FA**. Todo está diseñado para correr en un
-solo servidor **Windows Server 2022** (SRV-LOGI01), aplicando la tríada CIA, el mínimo privilegio y el
+Employees manage routes and shipments with their **Active Directory** account, and external customers
+request and track their shipments with **email, password and 2FA**. Everything is designed to run on a
+single **Windows Server 2022** host (SRV-LOGI01), applying the CIA triad, least privilege and the
 OWASP Top 10.
 
-## Características
+> The code, UI and database are in Spanish (route names, roles, table names). This README is in English.
 
-- **Login único:** la app busca primero en los clientes y, si no lo encuentra, trata al usuario como empleado y lo valida contra Active Directory (LDAPS). Cada quien llega a su panel.
-- **Cuatro roles** con una matriz de permisos central (*deny by default*): ADMINISTRADOR, EMPLEADO, CHOFER y CLIENTE.
-- **2FA (TOTP)** para clientes, con verificación de correo y bloqueo tras 5 intentos.
-- **Bitácora de auditoría inalterable:** sin permisos de UPDATE/DELETE para la app y un trigger que rechaza cambios.
-- **Revocación inmediata** de empleados: la sesión se invalida en su siguiente petición.
-- **Protección contra IDOR:** el dueño de cada recurso sale del token, nunca de la URL.
-- **Identificadores UUID v7** y folios de rastreo aleatorios.
+## Features
 
-## Tecnologías
+- **Single login:** the app first looks the user up among customers; if not found, it treats them as an employee and validates them against Active Directory (LDAPS). Each user lands on their own dashboard.
+- **Four roles** with a central, *deny-by-default* permission matrix: ADMINISTRADOR, EMPLEADO, CHOFER (driver) and CLIENTE (customer).
+- **2FA (TOTP)** for customers, with email verification and account lockout after 5 failed attempts.
+- **Tamper-proof audit log:** the app's database role has no UPDATE/DELETE on it, and a trigger rejects any change.
+- **Immediate revocation** of employees: their session is invalidated on the next request.
+- **IDOR protection:** the owner of every resource comes from the token, never from the URL.
+- **UUID v7 identifiers** and random tracking numbers.
 
-| Capa | Tecnología |
+## Tech stack
+
+| Layer | Technology |
 |---|---|
 | Frontend | React 19 + TypeScript (Vite) |
 | Backend | Node.js 24 + Express 5 (Servidor.js) |
 | ORM | Prisma 6 |
-| Base de datos | PostgreSQL 18 |
-| Identidad | Active Directory (LDAPS) + JWT en cookie HttpOnly |
-| Servidor web | IIS 10 + URL Rewrite + ARR (proxy inverso con HTTPS) |
-| Sistema operativo | Windows Server 2022 |
+| Database | PostgreSQL 18 |
+| Identity | Active Directory (LDAPS) + JWT in an HttpOnly cookie |
+| Web server | IIS 10 + URL Rewrite + ARR (HTTPS reverse proxy) |
+| Operating system | Windows Server 2022 |
 
-## Estructura
+## Project structure
 
 ```
 .
 ├── base-de-datos/
-│   └── crear_base_de_datos.sql     Tablas, roles de PostgreSQL, permisos y triggers
+│   └── crear_base_de_datos.sql     Tables, PostgreSQL roles, permissions and triggers
 ├── logitrans-api/                  BACKEND
-│   ├── Servidor.js                 Arranque: middlewares globales y montaje de rutas
+│   ├── Servidor.js                 Entry point: global middleware and route mounting
 │   ├── src/
-│   │   ├── config.js               Lee el .env y valida los secretos
-│   │   ├── roles.js                Roles y grupos de AD
-│   │   ├── seguridad/              Sesión (JWT), matriz de permisos, bitácora, cifrado, rate limit
-│   │   ├── servicios/              Active Directory y tareas periódicas
-│   │   └── rutas/                  Un archivo por rol (publico, sesion, cliente, chofer,
+│   │   ├── config.js               Reads .env and validates secrets
+│   │   ├── roles.js                Roles and AD groups
+│   │   ├── seguridad/              Session (JWT), permission matrix, audit log, encryption, rate limiting
+│   │   ├── servicios/              Active Directory and scheduled tasks
+│   │   └── rutas/                  One file per role (publico, sesion, cliente, chofer,
 │   │                               empleado, consultas, administrador)
-│   ├── pruebas/matriz-permisos.js  Prueba cada endpoint contra cada rol
-│   ├── prisma/schema.prisma        Modelo de datos
-│   └── .env.example                Plantilla de configuración
+│   ├── pruebas/matriz-permisos.js  Tests every endpoint against every role
+│   ├── prisma/schema.prisma        Data model
+│   └── .env.example                Configuration template
 └── logitrans-web/                  FRONTEND
-    ├── src/paginas/                Login, panel del personal y portal de clientes
-    └── public/web.config           Configuración de IIS (HTTPS, proxy /api, cabeceras de seguridad)
+    ├── src/paginas/                Login, staff dashboard and customer portal
+    └── public/web.config           IIS configuration (HTTPS, /api proxy, security headers)
 ```
 
-## Correr en local
+## Running locally
 
-Requisitos: **Node.js 24** y **PostgreSQL 18**. Sin Active Directory, el backend usa un AD simulado.
+Requirements: **Node.js 24** and **PostgreSQL 18**. Without Active Directory, the backend uses a simulated AD.
 
-**1. Base de datos** (como superusuario de PostgreSQL):
+**1. Database** (as a PostgreSQL superuser):
 
 ```bash
 psql -h 127.0.0.1 -U postgres \
@@ -72,15 +74,15 @@ psql -h 127.0.0.1 -U postgres \
 cd logitrans-api
 npm install
 cp .env.example .env
-npm run generar-clave        # ejecútalo dos veces: pega los valores en JWT_SECRET y CLAVE_CIFRADO
+npm run generar-clave        # run it twice: paste the values into JWT_SECRET and CLAVE_CIFRADO
 npx prisma generate
 npm run dev                  # http://127.0.0.1:3000
 ```
 
-En local pon `COOKIE_SECURE=false` en el `.env` (no hay HTTPS) y revisa que `DATABASE_URL` use la
-contraseña de `app_logitrans` del paso 1.
+Locally, set `COOKIE_SECURE=false` in `.env` (there is no HTTPS) and make sure `DATABASE_URL` uses the
+`app_logitrans` password from step 1.
 
-**3. Frontend** (en otra terminal):
+**3. Frontend** (in another terminal):
 
 ```bash
 cd logitrans-web
@@ -88,51 +90,51 @@ npm install
 npm run dev                  # http://localhost:5173
 ```
 
-### Usuarios de prueba
+### Test users
 
-Con `AD_SIMULADO=true`, los empleados usan la contraseña de `AD_SIMULADO_PASSWORD` del `.env`:
+With `AD_SIMULADO=true`, employees use the password set in `AD_SIMULADO_PASSWORD` in `.env`:
 
-| Usuario | Rol | Llega a |
+| User | Role | Dashboard |
 |---|---|---|
-| `ana.torres` | ADMINISTRADOR | Empleados y accesos, bitácora, reportes, rutas |
-| `maria.lopez` | EMPLEADO | Rutas, asignar ruta, reportes |
-| `juan.perez`, `carlos.ruiz` | CHOFER | Mis rutas |
+| `ana.torres` | ADMINISTRADOR | Employees and access, audit log, reports, routes |
+| `maria.lopez` | EMPLEADO | Routes, assign route, reports |
+| `juan.perez`, `carlos.ruiz` | CHOFER | My routes |
 
-Los **clientes** se registran en la pantalla de login (**Crea tu cuenta**). No hay servidor de correo:
-el enlace de verificación aparece en la terminal del backend, en la línea que empieza con `[CORREO]`.
-Después se escanea el QR con Google o Microsoft Authenticator.
+**Customers** sign up from the login screen (**Crea tu cuenta**). There is no mail server: the
+verification link is printed in the backend terminal, on the line starting with `[CORREO]`. Then they
+scan the QR code with Google or Microsoft Authenticator.
 
-## Roles y permisos
+## Roles and permissions
 
-| Rol | Origen | Puede |
+| Role | Source | Can |
 |---|---|---|
-| ADMINISTRADOR | Grupo de AD `GG_Administradores` | Revocar y reactivar accesos, ver la bitácora, reportes y rutas. No modifica envíos. |
-| EMPLEADO | Grupo de AD `GG_Empleados` | Crear rutas y asignar envíos, choferes y vehículos; ver rutas y reportes. |
-| CHOFER | Grupo de AD `GG_Choferes` | Ver sus rutas y cambiar el estado de los envíos de esas rutas. |
-| CLIENTE | Cuenta del portal (sin AD) | Solicitar, listar y rastrear solo sus envíos; cambiar su contraseña. |
+| ADMINISTRADOR | AD group `GG_Administradores` | Revoke and restore access, view the audit log, reports and routes. Cannot modify shipments. |
+| EMPLEADO | AD group `GG_Empleados` | Create routes and assign shipments, drivers and vehicles; view routes and reports. |
+| CHOFER | AD group `GG_Choferes` | View their own routes and update the status of shipments on those routes. |
+| CLIENTE | Portal account (no AD) | Request, list and track only their own shipments; change their password. |
 
-Cada archivo de `logitrans-api/src/rutas/` declara sus roles; con esas declaraciones se arma la matriz.
-Un endpoint no declarado responde 404, y el servidor no arranca si una ruta queda sin roles.
+Each file in `logitrans-api/src/rutas/` declares its roles, and the matrix is built from those
+declarations. An undeclared endpoint returns 404, and the server refuses to start if a route has no roles.
 
 ```bash
 cd logitrans-api
-npm run permisos                                   # imprime la matriz completa
-node Servidor.js > servidor.log 2>&1 &             # en una base de laboratorio:
-npm run prueba:permisos -- servidor.log            # 107 comprobaciones (roles, IDOR, login, revocación)
+npm run permisos                                   # prints the full matrix
+node Servidor.js > servidor.log 2>&1 &             # against a lab database:
+npm run prueba:permisos -- servidor.log            # 107 checks (roles, IDOR, login, revocation)
 ```
 
-## Despliegue en Windows Server
+## Deploying to Windows Server
 
-En producción, todo vive en SRV-LOGI01:
+In production, everything runs on SRV-LOGI01:
 
-1. **Active Directory y AD CS:** dominio `logitrans.local`, grupos `GG_*`, LDAPS y certificado para `portal.logitrans.local`.
-2. **PostgreSQL 18:** escucha solo en `127.0.0.1`, como servicio con NetworkService.
-3. **Servidor.js:** servicio de Windows (NSSM) con `LocalService`, en `127.0.0.1:3000`, con `NODE_ENV=production` y `AD_SIMULADO=false`.
-4. **IIS:** sirve `logitrans-web/dist` por HTTPS y reenvía `/api` a Node.
-5. **Firewall de Windows:** desde la red de clientes solo se permite el puerto 443.
+1. **Active Directory and AD CS:** domain `logitrans.local`, `GG_*` groups, LDAPS and a certificate for `portal.logitrans.local`.
+2. **PostgreSQL 18:** listens only on `127.0.0.1`, running as a service under NetworkService.
+3. **Servidor.js:** Windows service (NSSM) under `LocalService`, on `127.0.0.1:3000`, with `NODE_ENV=production` and `AD_SIMULADO=false`.
+4. **IIS:** serves `logitrans-web/dist` over HTTPS and forwards `/api` to Node.
+5. **Windows Firewall:** only port 443 is allowed from the customer network.
 
-## Seguridad del repositorio
+## Repository security
 
-- El archivo `.env` real **nunca** se sube: contiene los secretos (JWT, clave de cifrado, contraseñas de la base y de LDAP). Solo se versiona `.env.example`.
-- Las contraseñas que aparecen en este README y en `.env.example` son **de ejemplo para laboratorio**. En el servidor, genera contraseñas nuevas.
-- Los certificados y llaves (`*.cer`, `*.pem`, `*.pfx`…) tampoco se suben.
+- The real `.env` file is **never** committed: it holds the secrets (JWT, encryption key, database and LDAP passwords). Only `.env.example` is versioned.
+- The passwords shown in this README and in `.env.example` are **lab examples only**. Generate new ones on the server.
+- Certificates and keys (`*.cer`, `*.pem`, `*.pfx`…) are not committed either.
